@@ -69,41 +69,141 @@ function ProductCard({ product, onAdd, cartQty }) {
   )
 }
 
-// ── Receipt overlay — thermal-style ──────────────────────────
+// ── Receipt overlay — thermal-style with payment details ──────
 function Receipt({ data, onClose, onNewSale }) {
   const change = data.payMethod === 'Cash' ? data.cashTendered - data.total : 0
+
+  // Payment method icon + colour
+  const methodStyle = {
+    Cash:   { icon: '💵', color: '#276749', label: 'Cash Payment' },
+    'M-Pesa': { icon: '📱', color: '#1a6b3a', label: 'M-Pesa Mobile Money' },
+    Card:   { icon: '💳', color: '#2b4acb', label: 'Card Payment' },
+    Bank:   { icon: '🏦', color: '#744210', label: 'Bank Transfer' },
+  }[data.payMethod] || { icon: '💰', color: '#333', label: data.payMethod }
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-      <div style={{ background: '#fff', borderRadius: 14, width: 360, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', fontFamily: "'Courier New', monospace" }}>
-        <div style={{ padding: '20px 20px 0' }}>
-          <div style={{ textAlign: 'center', marginBottom: 14 }}>
-            <div style={{ background: '#e53e3e', color: '#fff', borderRadius: 8, padding: '6px 0', fontWeight: 900, fontSize: '1rem', letterSpacing: 2 }}>OmniBiz POS</div>
-            <div style={{ fontSize: '0.7rem', color: '#666', marginTop: 6 }}>{new Date().toLocaleString()}</div>
-            <div style={{ fontSize: '0.7rem', color: '#666' }}>Receipt #{data.txnId}</div>
-            <div style={{ fontSize: '0.78rem', color: '#444', marginTop: 4 }}>Customer: <strong>{data.customer || 'Walk-in'}</strong></div>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+      <div style={{ background: '#fff', borderRadius: 14, width: 370, maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.35)', fontFamily: "'Courier New', monospace" }}>
+        <div style={{ padding: '22px 22px 0' }}>
+
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: 16 }}>
+            <div style={{ background: '#e53e3e', color: '#fff', borderRadius: 8, padding: '7px 0', fontWeight: 900, fontSize: '1rem', letterSpacing: 3 }}>OmniBiz POS</div>
+            <div style={{ fontSize: '0.68rem', color: '#888', marginTop: 6 }}>{new Date().toLocaleString()}</div>
+            <div style={{ fontSize: '0.68rem', color: '#888' }}>Receipt #{data.txnId}</div>
+            <div style={{ marginTop: 6, fontSize: '0.78rem', color: '#444' }}>Customer: <strong>{data.customer || 'Walk-in Customer'}</strong></div>
           </div>
-          <div style={{ borderBottom: '1px dashed #ccc', margin: '10px 0' }} />
+
+          <div style={{ borderBottom: '1px dashed #bbb', margin: '10px 0' }} />
+
+          {/* Items */}
           {data.items.map((item, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: 6 }}>
-              <div style={{ flex: 1 }}><div style={{ fontWeight: 700 }}>{item.name}</div><div style={{ color: '#888' }}>{item.qty} × KES {fmt(item.price)}</div></div>
-              <div style={{ fontWeight: 700, minWidth: 72, textAlign: 'right' }}>KES {fmt(item.price * item.qty)}</div>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: 7 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700 }}>{item.name}</div>
+                <div style={{ color: '#888', fontSize: '0.68rem' }}>{item.qty} × KES {fmt(item.price)}</div>
+              </div>
+              <div style={{ fontWeight: 700, minWidth: 80, textAlign: 'right' }}>KES {fmt(item.price * item.qty)}</div>
             </div>
           ))}
-          <div style={{ borderBottom: '1px dashed #ccc', margin: '10px 0' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '1rem', marginBottom: 6 }}>
+
+          <div style={{ borderBottom: '1px dashed #bbb', margin: '10px 0' }} />
+
+          {/* Total */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '1.05rem', marginBottom: 12 }}>
             <span>TOTAL</span><span>KES {fmt(data.total)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#555', marginBottom: 4 }}>
-            <span>{data.payMethod}</span><span>KES {fmt(data.cashTendered)}</span>
-          </div>
-          {data.payMethod === 'Cash' && change >= 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#276749', fontWeight: 700 }}>
-              <span>Change</span><span>KES {fmt(change)}</span>
+
+          {/* ── Payment details block ── */}
+          <div style={{ background: '#f7f8fc', borderRadius: 10, padding: '12px 14px', marginBottom: 12, border: `1.5px solid ${methodStyle.color}22` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ fontSize: '1.2rem' }}>{methodStyle.icon}</span>
+              <span style={{ fontWeight: 800, fontSize: '0.85rem', color: methodStyle.color }}>{methodStyle.label}</span>
             </div>
-          )}
-          <div style={{ textAlign: 'center', color: '#999', fontSize: '0.65rem', margin: '12px 0' }}>Thank you for shopping with us!</div>
+
+            {data.payMethod === 'Cash' && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: 4 }}>
+                  <span style={{ color: '#718096' }}>Cash Tendered</span>
+                  <span style={{ fontWeight: 700 }}>KES {fmt(data.cashTendered)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', borderTop: '1px dashed #ddd', paddingTop: 6, marginTop: 4 }}>
+                  <span style={{ color: '#276749', fontWeight: 700 }}>Change Given</span>
+                  <span style={{ fontWeight: 900, color: '#276749', fontSize: '0.95rem' }}>KES {fmt(change)}</span>
+                </div>
+              </>
+            )}
+
+            {data.payMethod === 'M-Pesa' && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: 4 }}>
+                  <span style={{ color: '#718096' }}>Mobile Number</span>
+                  <span style={{ fontWeight: 700 }}>{data.payDetails?.phone || '—'}</span>
+                </div>
+                {data.payDetails?.ref && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                    <span style={{ color: '#718096' }}>Transaction Ref</span>
+                    <span style={{ fontWeight: 700 }}>{data.payDetails.ref}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', borderTop: '1px dashed #ddd', paddingTop: 6, marginTop: 6 }}>
+                  <span style={{ color: '#718096' }}>Amount Paid</span>
+                  <span style={{ fontWeight: 900, color: '#1a6b3a' }}>KES {fmt(data.total)}</span>
+                </div>
+              </>
+            )}
+
+            {data.payMethod === 'Card' && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: 4 }}>
+                  <span style={{ color: '#718096' }}>Card Type</span>
+                  <span style={{ fontWeight: 700 }}>{data.payDetails?.cardType || 'Card'}</span>
+                </div>
+                {data.payDetails?.last4 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                    <span style={{ color: '#718096' }}>Card Number</span>
+                    <span style={{ fontWeight: 700 }}>•••• •••• •••• {data.payDetails.last4}</span>
+                  </div>
+                )}
+                {data.payDetails?.ref && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginTop: 4 }}>
+                    <span style={{ color: '#718096' }}>Auth Code</span>
+                    <span style={{ fontWeight: 700 }}>{data.payDetails.ref}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', borderTop: '1px dashed #ddd', paddingTop: 6, marginTop: 6 }}>
+                  <span style={{ color: '#718096' }}>Amount Charged</span>
+                  <span style={{ fontWeight: 900, color: '#2b4acb' }}>KES {fmt(data.total)}</span>
+                </div>
+              </>
+            )}
+
+            {data.payMethod === 'Bank' && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: 4 }}>
+                  <span style={{ color: '#718096' }}>Bank Name</span>
+                  <span style={{ fontWeight: 700 }}>{data.payDetails?.bankName || '—'}</span>
+                </div>
+                {data.payDetails?.ref && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                    <span style={{ color: '#718096' }}>Reference</span>
+                    <span style={{ fontWeight: 700 }}>{data.payDetails.ref}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', borderTop: '1px dashed #ddd', paddingTop: 6, marginTop: 6 }}>
+                  <span style={{ color: '#718096' }}>Amount Transferred</span>
+                  <span style={{ fontWeight: 900, color: '#744210' }}>KES {fmt(data.total)}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div style={{ textAlign: 'center', color: '#aaa', fontSize: '0.65rem', marginBottom: 16 }}>
+            — Thank you for shopping with us —
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, padding: '0 20px 20px' }}>
+
+        <div style={{ display: 'flex', gap: 10, padding: '0 22px 22px' }}>
           <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f7f8fc', cursor: 'pointer', fontWeight: 700 }}>Close</button>
           <button onClick={onNewSale} style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: '#38a169', color: '#fff', cursor: 'pointer', fontWeight: 900 }}>🛒 New Sale</button>
         </div>
@@ -250,6 +350,8 @@ export default function CashierDashboard() {
   const [payOpen, setPayOpen]   = useState(false)
   const [payMethod, setPayMethod] = useState('Cash')
   const [tendered, setTendered] = useState('')
+  // Method-specific fields
+  const [payDetails, setPayDetails] = useState({ phone: '', ref: '', cardType: 'Visa', last4: '', bankName: '' })
   const [processing, setProc]   = useState(false)
 
   // Receipt + session
@@ -302,7 +404,7 @@ export default function CashierDashboard() {
     if (item && qty > item.max) { showToast(`Max ${item.max}`); return }
     setCart(p => p.map(i => i.id === id ? { ...i, qty } : i))
   }
-  const clearCart = () => { setCart([]); setCustomer(''); setTendered('') }
+  const clearCart = () => { setCart([]); setCustomer(''); setTendered(''); setPayDetails({ phone: '', ref: '', cardType: 'Visa', last4: '', bankName: '' }) }
   const cartTotal = cart.reduce((s, i) => s + i.price * i.qty, 0)
   const cartCount = cart.reduce((s, i) => s + i.qty, 0)
   const change    = parseFloat(tendered || 0) - cartTotal
@@ -317,7 +419,7 @@ export default function CashierDashboard() {
       let txnId
       if (isOnline) { const d = await post('/api/orders', payload); txnId = d.transaction_id }
       else { await queueSale(payload); txnId = `OFFLINE-${Date.now()}` }
-      setReceipt({ txnId, customer: customer || 'Walk-in Customer', items: [...cart], total: cartTotal, cashTendered: parseFloat(tendered || cartTotal), payMethod })
+      setReceipt({ txnId, customer: customer || 'Walk-in Customer', items: [...cart], total: cartTotal, cashTendered: parseFloat(tendered || cartTotal), payMethod, payDetails: { ...payDetails } })
       setSessCount(c => c + 1); setSessTotal(t => t + cartTotal)
       setPayOpen(false); clearCart()
     } catch (err) { setError(err.message) } finally { setProc(false) }
@@ -448,37 +550,130 @@ export default function CashierDashboard() {
       {/* Payment modal */}
       {payOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
-            <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: 20 }}>Payment — KES {fmt(cartTotal)}</div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: 4 }}>Payment</div>
+            <div style={{ color: '#718096', fontSize: '0.8rem', marginBottom: 20 }}>Total: <strong style={{ color: '#1a202c', fontSize: '1rem' }}>KES {fmt(cartTotal)}</strong></div>
+
+            {/* Method tabs */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
               {[['Cash','💵'],['M-Pesa','📱'],['Card','💳'],['Bank','🏦']].map(([m, ic]) => (
-                <button key={m} type="button" onClick={() => setPayMethod(m)}
-                  style={{ flex: 1, padding: '10px 4px', borderRadius: 8, border: '2px solid', borderColor: payMethod === m ? '#38a169' : '#e2e8f0', background: payMethod === m ? '#f0fff4' : '#f7f8fc', color: payMethod === m ? '#276749' : '#718096', fontWeight: 700, fontSize: '0.68rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                  <span style={{ fontSize: '1.1rem' }}>{ic}</span>{m}
+                <button key={m} type="button"
+                  onClick={() => { setPayMethod(m); setPayDetails({ phone: '', ref: '', cardType: 'Visa', last4: '', bankName: '' }) }}
+                  style={{ flex: 1, padding: '10px 4px', borderRadius: 10, border: '2px solid', borderColor: payMethod === m ? '#38a169' : '#e2e8f0', background: payMethod === m ? '#f0fff4' : '#f7f8fc', color: payMethod === m ? '#276749' : '#718096', fontWeight: 700, fontSize: '0.68rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'all 0.15s' }}>
+                  <span style={{ fontSize: '1.2rem' }}>{ic}</span>{m}
                 </button>
               ))}
             </div>
+
+            {/* ── Cash ── */}
             {payMethod === 'Cash' && (
-              <>
-                <label className="form-field" style={{ marginBottom: 10 }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Cash tendered (KES)</span>
-                  <input type="number" autoFocus min={cartTotal} value={tendered} onChange={e => setTendered(e.target.value)} placeholder={fmt(cartTotal)}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <label className="form-field">
+                  <span style={{ fontWeight: 600 }}>Cash tendered (KES) *</span>
+                  <input type="number" autoFocus min={cartTotal} value={tendered}
+                    onChange={e => setTendered(e.target.value)}
+                    placeholder={`Enter amount (min KES ${fmt(cartTotal)})`}
                     style={{ fontSize: '1.1rem', fontWeight: 700, padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' }} />
                 </label>
                 {tendered && parseFloat(tendered) >= cartTotal && (
-                  <div style={{ padding: '9px 12px', background: '#f0fff4', borderRadius: 8, marginBottom: 14, display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#276749' }}>
-                    <span>Change</span><span>KES {fmt(change)}</span>
+                  <div style={{ padding: '10px 14px', background: '#f0fff4', borderRadius: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#276749', fontSize: '0.9rem' }}>
+                    <span>💵 Change</span><span>KES {fmt(parseFloat(tendered) - cartTotal)}</span>
                   </div>
                 )}
-              </>
+              </div>
             )}
-            {payMethod !== 'Cash' && <div style={{ padding: '12px', background: '#f7f8fc', borderRadius: 8, marginBottom: 14, fontSize: '0.82rem', color: '#718096' }}>Amount due: <strong>KES {fmt(cartTotal)}</strong> via {payMethod}</div>}
-            {error && <div style={{ marginBottom: 10, padding: '7px 10px', background: 'rgba(229,62,62,0.07)', borderRadius: 7, color: '#c53030', fontSize: '0.75rem' }}>{error}</div>}
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => { setPayOpen(false); setError('') }} style={{ flex: 1, padding: '12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f7f8fc', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={checkout} disabled={processing || (payMethod === 'Cash' && (!tendered || parseFloat(tendered) < cartTotal))}
-                style={{ flex: 2, padding: '12px', borderRadius: 8, border: 'none', background: processing ? '#ccc' : '#38a169', color: '#fff', fontWeight: 900, cursor: 'pointer', fontSize: '0.95rem' }}>
-                {processing ? 'Processing…' : `Confirm ${payMethod}`}
+
+            {/* ── M-Pesa ── */}
+            {payMethod === 'M-Pesa' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <label className="form-field">
+                  <span style={{ fontWeight: 600 }}>Mobile number *</span>
+                  <input type="tel" autoFocus value={payDetails.phone}
+                    onChange={e => setPayDetails(p => ({ ...p, phone: e.target.value }))}
+                    placeholder="e.g. 0712 345 678"
+                    style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box', fontSize: '1rem' }} />
+                </label>
+                <label className="form-field">
+                  <span style={{ fontWeight: 600 }}>M-Pesa confirmation code (optional)</span>
+                  <input value={payDetails.ref}
+                    onChange={e => setPayDetails(p => ({ ...p, ref: e.target.value }))}
+                    placeholder="e.g. QHT3K9LM2P"
+                    style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: '0.95rem' }} />
+                </label>
+                <div style={{ padding: '10px 14px', background: '#f0fff4', borderRadius: 8, fontSize: '0.82rem', color: '#276749', fontWeight: 600 }}>
+                  📱 Amount to send: <strong>KES {fmt(cartTotal)}</strong>
+                </div>
+              </div>
+            )}
+
+            {/* ── Card ── */}
+            {payMethod === 'Card' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <label className="form-field">
+                  <span style={{ fontWeight: 600 }}>Card type</span>
+                  <select value={payDetails.cardType} onChange={e => setPayDetails(p => ({ ...p, cardType: e.target.value }))}
+                    style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' }}>
+                    {['Visa', 'Mastercard', 'Amex', 'Other'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span style={{ fontWeight: 600 }}>Last 4 digits (optional)</span>
+                  <input autoFocus maxLength={4} value={payDetails.last4}
+                    onChange={e => setPayDetails(p => ({ ...p, last4: e.target.value.replace(/\D/g,'') }))}
+                    placeholder="e.g. 4242"
+                    style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: '1rem', letterSpacing: 4 }} />
+                </label>
+                <label className="form-field">
+                  <span style={{ fontWeight: 600 }}>Auth / approval code (optional)</span>
+                  <input value={payDetails.ref}
+                    onChange={e => setPayDetails(p => ({ ...p, ref: e.target.value }))}
+                    placeholder="e.g. 123456"
+                    style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box', fontFamily: 'monospace' }} />
+                </label>
+                <div style={{ padding: '10px 14px', background: '#ebf8ff', borderRadius: 8, fontSize: '0.82rem', color: '#2b6cb0', fontWeight: 600 }}>
+                  💳 Amount to charge: <strong>KES {fmt(cartTotal)}</strong>
+                </div>
+              </div>
+            )}
+
+            {/* ── Bank Transfer ── */}
+            {payMethod === 'Bank' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <label className="form-field">
+                  <span style={{ fontWeight: 600 }}>Bank name *</span>
+                  <input autoFocus value={payDetails.bankName}
+                    onChange={e => setPayDetails(p => ({ ...p, bankName: e.target.value }))}
+                    placeholder="e.g. Equity Bank, KCB, NCBA"
+                    style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' }} />
+                </label>
+                <label className="form-field">
+                  <span style={{ fontWeight: 600 }}>Transfer reference (optional)</span>
+                  <input value={payDetails.ref}
+                    onChange={e => setPayDetails(p => ({ ...p, ref: e.target.value }))}
+                    placeholder="e.g. TRF20241022001"
+                    style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box', fontFamily: 'monospace' }} />
+                </label>
+                <div style={{ padding: '10px 14px', background: '#fffaf0', borderRadius: 8, fontSize: '0.82rem', color: '#744210', fontWeight: 600 }}>
+                  🏦 Amount to transfer: <strong>KES {fmt(cartTotal)}</strong>
+                </div>
+              </div>
+            )}
+
+            {error && <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(229,62,62,0.07)', borderRadius: 7, color: '#c53030', fontSize: '0.75rem' }}>{error}</div>}
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button onClick={() => { setPayOpen(false); setError('') }}
+                style={{ flex: 1, padding: '12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f7f8fc', fontWeight: 700, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={checkout}
+                disabled={processing
+                  || (payMethod === 'Cash' && (!tendered || parseFloat(tendered) < cartTotal))
+                  || (payMethod === 'M-Pesa' && !payDetails.phone.trim())
+                  || (payMethod === 'Bank' && !payDetails.bankName.trim())
+                }
+                style={{ flex: 2, padding: '12px', borderRadius: 8, border: 'none', background: processing ? '#ccc' : '#38a169', color: '#fff', fontWeight: 900, cursor: 'pointer', fontSize: '0.95rem', transition: 'background 0.15s' }}>
+                {processing ? 'Processing…' : `✓ Confirm ${payMethod} — KES ${fmt(cartTotal)}`}
               </button>
             </div>
           </div>
