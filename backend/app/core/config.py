@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     REFRESH_COOKIE_NAME: str = 'omnibiz_refresh'
     USE_SECURE_COOKIES: bool = False
 
+    # SameSite must be 'none' for cross-origin (Vercel → Render)
+    # Local dev uses 'lax' so cookies work without HTTPS
+    COOKIE_SAMESITE: str = 'lax'
+
     class Config:
         env_file = '.env'
 

@@ -32,7 +32,7 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str) 
         value=access_token,
         httponly=True,
         secure=settings.USE_SECURE_COOKIES,
-        samesite='strict',
+        samesite=settings.COOKIE_SAMESITE,
         path='/',
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
@@ -41,7 +41,7 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str) 
         value=refresh_token,
         httponly=True,
         secure=settings.USE_SECURE_COOKIES,
-        samesite='strict',
+        samesite=settings.COOKIE_SAMESITE,
         path='/',
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
     )
@@ -329,17 +329,27 @@ def list_users(current_user: User = Depends(get_current_user), db: Session = Dep
     memberships = db.query(UserTenant).filter(UserTenant.tenant_id == membership.tenant_id).all()
     result = []
     for m in memberships:
-        u = db.query(User).filter(User.id == m.user_id).first()
-        if u:
-            result.append({
-                'id': u.id,
-                'email': u.email,
-                'role': m.role,
-                'assigned_name': m.assigned_name or '',
-                'branch_id': m.branch_id,
-                'is_active': u.is_active,
-                'created_at': u.created_at.isoformat(),
-            })
+        u = db.query(User).filter(
+            User.id == m.user_id,
+            User.is_super_admin == False,   # Never expose SuperAdmin
+        ).first()
+        if not u:
+            continue
+        # Managers can only see Cashiers in their branch
+        if membership.role == 'Manager':
+            if m.role not in ('Cashier',):
+                continue
+            if membership.branch_id and m.branch_id != membership.branch_id:
+                continue
+        result.append({
+            'id': u.id,
+            'email': u.email,
+            'role': m.role,
+            'assigned_name': m.assigned_name or '',
+            'branch_id': m.branch_id,
+            'is_active': u.is_active,
+            'created_at': u.created_at.isoformat(),
+        })
     return result
 
 
@@ -358,9 +368,17 @@ def create_staff(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Insufficient permissions')
 
     # Enforce: staff roles only — Owners cannot be created here
-    valid_roles = ('Manager', 'Cashier')
-    if payload.role not in valid_roles:
-        raise HTTPException(status_code=400, detail='Only Manager or Cashier roles can be assigned here')
+    # Manager can only create Cashiers; Owner can create Manager or Cashier
+    caller_role = caller_membership.role
+    if caller_role == 'Manager':
+        if payload.role != 'Cashier':
+            raise HTTPException(status_code=400, detail='Managers can only add Cashiers')
+    elif caller_role == 'Owner':
+        valid_roles = ('Manager', 'Cashier')
+        if payload.role not in valid_roles:
+            raise HTTPException(status_code=400, detail='Only Manager or Cashier roles can be assigned here')
+    else:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Insufficient permissions')
 
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=400, detail='Email already in use')

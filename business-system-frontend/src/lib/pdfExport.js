@@ -163,8 +163,8 @@ function drawTable(doc, headers, rows, startY, W, options = {}) {
 
 // ── Public export functions ────────────────────────────────────
 
-export function exportDashboardPDF(overview, analytics, tenantName) {
-  const { doc, W, H, addFooter, startY } = createDoc(
+export async function exportDashboardPDF(overview, analytics, tenantName) {
+  const { doc, W, H, addFooter, startY } = await createDoc(
     'Dashboard Overview',
     `${tenantName} · All branches`
   )
@@ -207,8 +207,8 @@ export function exportDashboardPDF(overview, analytics, tenantName) {
   doc.save(`omnibiz-dashboard-${Date.now()}.pdf`)
 }
 
-export function exportBranchPDF(branchData, branchName) {
-  const { doc, W, H, addFooter, startY } = createDoc(
+export async function exportBranchPDF(branchData, branchName) {
+  const { doc, W, H, addFooter, startY } = await createDoc(
     `Branch Report — ${branchName}`,
     `Generated ${new Date().toLocaleDateString()}`
   )

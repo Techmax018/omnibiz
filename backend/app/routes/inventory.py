@@ -132,6 +132,74 @@ def create_product(
         ) from exc
 
 
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    sales_price: Optional[float] = None
+    cost_price: Optional[float] = None
+    vat_category: Optional[str] = None
+    item_code: Optional[str] = None
+    hs_code: Optional[str] = None
+    reorder_level: Optional[float] = None
+    quantity_on_hand: Optional[float] = None
+    active: Optional[bool] = None
+
+
+@router.put('/api/inventory/products/{product_id}')
+def update_product(
+    product_id: int,
+    payload: ProductUpdate,
+    current_user=Depends(get_current_user),
+    current_tenant=Depends(get_current_tenant),
+    token_data=Depends(get_current_token_data),
+    role=Depends(RoleChecker(['Owner', 'Manager'])),
+    db: Session = Depends(get_db),
+):
+    product = db.query(Product).filter(
+        Product.id == product_id,
+        Product.tenant_id == current_tenant.id,
+    ).first()
+    if not product:
+        raise HTTPException(status_code=404, detail='Product not found')
+
+    branch_scope_check(token_data, product.branch_id)
+
+    try:
+        if payload.name is not None:         product.name = payload.name
+        if payload.description is not None:  product.description = payload.description
+        if payload.sales_price is not None:  product.sales_price = payload.sales_price
+        if payload.cost_price is not None:   product.cost_price = payload.cost_price
+        if payload.vat_category is not None: product.vat_category = payload.vat_category
+        if payload.item_code is not None:    product.item_code = payload.item_code
+        if payload.hs_code is not None:      product.hs_code = payload.hs_code
+        if payload.active is not None:       product.active = payload.active
+
+        inv = db.query(InventoryItem).filter(
+            InventoryItem.product_id == product_id,
+            InventoryItem.tenant_id == current_tenant.id,
+        ).first()
+        if inv:
+            if payload.reorder_level is not None:    inv.reorder_level = payload.reorder_level
+            if payload.quantity_on_hand is not None: inv.quantity_on_hand = payload.quantity_on_hand
+
+        db.commit()
+        db.refresh(product)
+        push_notification(
+            db, current_tenant.id, 'stock',
+            f'Product updated: {product.name}',
+            f'SKU {product.sku} updated by {current_user.email}.',
+            user_id=current_user.id,
+            branch_id=product.branch_id,
+        )
+        db.commit()
+        return serialize_product(product, inv)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail='Failed to update product.') from exc
+
+
 @router.get('/api/inventory/low-stock')
 def low_stock_alerts(current_tenant=Depends(get_current_tenant), db: Session = Depends(get_db)):
     items = db.query(InventoryItem).filter(InventoryItem.tenant_id == current_tenant.id).all()
