@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '../../context/AuthContext'
 import { API_BASE, defaultFetchOptions } from '../../api/config'
 import { get, post } from '../../api/client'
 import { getAnalytics } from '../../api/modules'
@@ -403,4 +402,193 @@ function InvoicesForm({ onAdd, creating }) {
 }
 function ReportsView() {
   return <div className="section-card"><p style={{ color: 'var(--text-muted)' }}>No reports available yet.</p></div>
+}
+
+// ── Requests Panel — approve/reject product requests and shifts ─
+function RequestsPanel() {
+  const [tab, setTab] = useState('products')
+  const [prodReqs, setProdReqs] = useState([])
+  const [shifts, setShifts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [noteModal, setNoteModal] = useState(null) // { type, id, action }
+  const [note, setNote] = useState('')
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const [pr, sh] = await Promise.all([
+        get('/api/product-requests?status_filter=pending'),
+        get('/api/shifts?status_filter=pending'),
+      ])
+      setProdReqs(pr)
+      setShifts(sh)
+    } catch (e) { setError(e.message) }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const notify = (msg, isErr = false) => {
+    if (isErr) { setError(msg); setSuccess('') }
+    else { setSuccess(msg); setError(''); setTimeout(() => setSuccess(''), 4000) }
+  }
+
+  const handleAction = async (type, id, action) => {
+    setNoteModal({ type, id, action })
+    setNote('')
+  }
+
+  const confirmAction = async () => {
+    if (!noteModal) return
+    const { type, id, action } = noteModal
+    try {
+      const path = type === 'product'
+        ? `/api/product-requests/${id}/${action}`
+        : `/api/shifts/${id}/${action}`
+      await post(path, { note })
+      notify(`${type === 'product' ? 'Product request' : 'Shift'} ${action}d successfully`)
+      setNoteModal(null)
+      load()
+    } catch (e) { notify(e.message, true) }
+  }
+
+  const statusBadge = (s) => ({
+    pending:  <span style={{ color: '#d69e2e', fontWeight: 700 }}>⏳ Pending</span>,
+    approved: <span style={{ color: '#38a169', fontWeight: 700 }}>✅ Approved</span>,
+    rejected: <span style={{ color: '#e53e3e', fontWeight: 700 }}>❌ Rejected</span>,
+  }[s] || s)
+
+  const pendingProds = prodReqs.filter(r => r.status === 'pending').length
+  const pendingShifts = shifts.filter(s => s.status === 'pending').length
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="mod-header">
+        <div>
+          <h2 className="mod-title">Approval Requests</h2>
+          <p className="mod-subtitle">Review and approve product additions and shift submissions from staff</p>
+        </div>
+        {(pendingProds + pendingShifts) > 0 && (
+          <span className="mod-stat" style={{ color: '#d69e2e' }}>
+            {pendingProds + pendingShifts} pending
+          </span>
+        )}
+      </div>
+
+      {/* Note modal */}
+      {noteModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 28, width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 12, textTransform: 'capitalize' }}>
+              {noteModal.action} {noteModal.type} request
+            </div>
+            <label className="form-field">
+              <span>Note {noteModal.action === 'reject' ? '(required reason)' : '(optional)'}</span>
+              <textarea
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder={noteModal.action === 'reject' ? 'Reason for rejection…' : 'Optional note…'}
+                style={{ width: '100%', minHeight: 80, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', resize: 'vertical', boxSizing: 'border-box' }}
+              />
+            </label>
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={() => setNoteModal(null)} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-alt)', cursor: 'pointer', fontWeight: 700 }}>
+                Cancel
+              </button>
+              <button
+                onClick={confirmAction}
+                disabled={noteModal.action === 'reject' && !note.trim()}
+                style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: noteModal.action === 'approve' ? '#38a169' : '#e53e3e', color: '#fff', cursor: 'pointer', fontWeight: 700 }}
+              >
+                Confirm {noteModal.action}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mod-tabs">
+        <button className={`mod-tab ${tab === 'products' ? 'active' : ''}`} onClick={() => setTab('products')}>
+          📦 Product Requests {pendingProds > 0 && <span style={{ marginLeft: 6, background: '#d69e2e', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: '0.68rem', fontWeight: 900 }}>{pendingProds}</span>}
+        </button>
+        <button className={`mod-tab ${tab === 'shifts' ? 'active' : ''}`} onClick={() => setTab('shifts')}>
+          🕐 Shift Submissions {pendingShifts > 0 && <span style={{ marginLeft: 6, background: '#d69e2e', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: '0.68rem', fontWeight: 900 }}>{pendingShifts}</span>}
+        </button>
+      </div>
+
+      {error   && <div className="notification notification-error" style={{ margin: 0 }}>{error}<button onClick={() => setError('')} style={{ marginLeft: 12, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>×</button></div>}
+      {success && <div className="notification" style={{ margin: 0, background: '#f0fff4', border: '1px solid #9ae6b4', color: '#276749' }}>✓ {success}</div>}
+
+      {loading && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading requests…</p>}
+
+      {/* Product requests */}
+      {!loading && tab === 'products' && (
+        <div className="section-card">
+          <table className="dashboard-table">
+            <thead><tr><th>Product</th><th>SKU</th><th>Price</th><th>Stock</th><th>Requested By</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              {prodReqs.length === 0 && (
+                <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 24 }}>No product requests</td></tr>
+              )}
+              {prodReqs.map(r => (
+                <tr key={r.id}>
+                  <td style={{ fontWeight: 600 }}>{r.name}</td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{r.sku}</td>
+                  <td>KES {Number(r.sales_price).toLocaleString()}</td>
+                  <td>{r.quantity_on_hand}</td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>User #{r.requested_by}</td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{r.created_at?.split('T')[0]}</td>
+                  <td>{statusBadge(r.status)}</td>
+                  <td>
+                    {r.status === 'pending' && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="button button-primary" style={{ fontSize: '0.7rem', padding: '4px 10px', background: '#38a169' }} onClick={() => handleAction('product', r.id, 'approve')}>✓ Approve</button>
+                        <button className="button" style={{ fontSize: '0.7rem', padding: '4px 10px', background: 'rgba(229,62,62,0.1)', color: '#c53030' }} onClick={() => handleAction('product', r.id, 'reject')}>✗ Reject</button>
+                      </div>
+                    )}
+                    {r.status !== 'pending' && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.review_note || '—'}</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Shift submissions */}
+      {!loading && tab === 'shifts' && (
+        <div className="section-card">
+          <table className="dashboard-table">
+            <thead><tr><th>Shift</th><th>Employee</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              {shifts.length === 0 && (
+                <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 24 }}>No shift submissions</td></tr>
+              )}
+              {shifts.map(s => (
+                <tr key={s.id}>
+                  <td style={{ fontWeight: 600 }}>{s.shift_name || `Shift #${s.id}`}</td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{s.employee_name || `User #${s.submitted_by}`}</td>
+                  <td style={{ fontSize: '0.75rem' }}>{s.clock_in?.replace('T', ' ').slice(0, 16)}</td>
+                  <td style={{ fontSize: '0.75rem' }}>{s.clock_out?.replace('T', ' ').slice(0, 16) || '—'}</td>
+                  <td>{s.hours_worked ? `${s.hours_worked}h` : '—'}</td>
+                  <td>{statusBadge(s.status)}</td>
+                  <td>
+                    {s.status === 'pending' && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="button button-primary" style={{ fontSize: '0.7rem', padding: '4px 10px', background: '#38a169' }} onClick={() => handleAction('shift', s.id, 'approve')}>✓ Approve</button>
+                        <button className="button" style={{ fontSize: '0.7rem', padding: '4px 10px', background: 'rgba(229,62,62,0.1)', color: '#c53030' }} onClick={() => handleAction('shift', s.id, 'reject')}>✗ Reject</button>
+                      </div>
+                    )}
+                    {s.status !== 'pending' && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{s.review_note || '—'}</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
 }
