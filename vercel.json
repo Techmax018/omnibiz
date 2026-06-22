@@ -5,5 +5,13 @@
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
-  "installCommand": "cd business-system-frontend && npm install"
+  "installCommand": "cd business-system-frontend && npm install",
+  "env": {
+    "VITE_API_BASE": "https://omnibiz-2ldo.onrender.com"
+  },
+  "build": {
+    "env": {
+      "VITE_API_BASE": "https://omnibiz-2ldo.onrender.com"
+    }
+  }
 }
