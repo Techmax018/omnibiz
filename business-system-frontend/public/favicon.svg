@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="omniGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0052D4" />
+      <stop offset="50%" stop-color="#4364F7" />
+      <stop offset="100%" stop-color="#6FB1FC" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F2FE" />
+      <stop offset="100%" stop-color="#4FACFE" />
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="#0B0F19"/>
+
+  <circle cx="256" cy="256" r="160" fill="none" stroke="url(#omniGrad)" stroke-width="32" stroke-linecap="round" stroke-dasharray="700 250"/>
+
+  <path d="M170 300 L230 240 L300 290 L350 190" fill="none" stroke="url(#glowGrad)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <circle cx="170" cy="300" r="18" fill="#00F2FE" />
+  <circle cx="230" cy="240" r="18" fill="#4FACFE" />
+  <circle cx="300" cy="290" r="18" fill="#4364F7" />
+  <circle cx="350" cy="190" r="22" fill="#00F2FE" />
+</svg>

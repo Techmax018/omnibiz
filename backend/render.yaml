@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: omnibiz-api
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # Set this manually in Render dashboard
+      - key: SECRET_KEY
+        generateValue: true  # Render auto-generates a secure value
+      - key: USE_SECURE_COOKIES
+        value: true
+      - key: API_ORIGINS
+        sync: false          # Set to your Vercel URL in Render dashboard

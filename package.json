@@ -1,0 +1,18 @@
+{
+  "name": "omnibiz-business-system",
+  "version": "1.0.0",
+  "description": "OmniBiz — Multi-tenant business intelligence platform",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names \"API,UI\" --prefix-colors \"cyan,magenta\" \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend && .venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "frontend": "cd business-system-frontend && npm run dev",
+    "build": "cd business-system-frontend && npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "MaxDevs",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
