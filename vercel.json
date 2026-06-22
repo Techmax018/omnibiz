@@ -1,0 +1,9 @@
+{
+  "buildCommand": "cd business-system-frontend && npm install && npm run build",
+  "outputDirectory": "business-system-frontend/dist",
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "installCommand": "cd business-system-frontend && npm install"
+}
