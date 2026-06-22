@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useAuth } from '../../context/AuthContext'
 import { API_BASE, defaultFetchOptions } from '../../api/config'
 import { get, post } from '../../api/client'
 import { getAnalytics } from '../../api/modules'
