@@ -389,15 +389,100 @@ function SalesForm({ onAdd, creating }) {
   )
 }
 function InvoicesForm({ onAdd, creating }) {
-  const [form, setForm] = useState({ client: '', status: 'Pending', amount: '' })
-  const submit = async (e) => { e.preventDefault(); await onAdd({ ...form, amount: parseFloat(form.amount) }); setForm({ client: '', status: 'Pending', amount: '' }) }
+  const [invoices, setInvoices] = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [selected, setSelected] = useState(null)
+  const [payForm, setPayForm]   = useState({ cash_amount: '', mobile_money_amount: '0', card_amount: '0', bank_transfer_amount: '0', notes: '' })
+  const [saving, setSaving]     = useState(false)
+  const [success, setSuccess]   = useState('')
+  const [error, setError]       = useState('')
+
+  useEffect(() => {
+    get('/api/finance/ledger?limit=50')
+      .then(() => {})
+      .catch(() => {})
+    // Load invoices from dashboard
+    get('/api/dashboard').then(d => {
+      setInvoices(d.recent_orders || [])
+    }).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  const statusColor = { paid: '#38a169', partial: '#d69e2e', credit: '#3182ce', pending: '#718096' }
+
   return (
-    <div className="section-card"><h2 style={{ marginBottom: 16, fontSize: '1rem', fontWeight: 700 }}>Create Invoice</h2>
-      <form onSubmit={submit}><div className="form-grid">
-        <label className="form-field"><span>Client</span><input value={form.client} onChange={e => setForm(p => ({...p,client:e.target.value}))} required/></label>
-        <label className="form-field"><span>Status</span><select value={form.status} onChange={e => setForm(p => ({...p,status:e.target.value}))}>{['Pending','Paid','Overdue'].map(s => <option key={s}>{s}</option>)}</select></label>
-        <label className="form-field"><span>Amount (KES)</span><input type="number" min="0" value={form.amount} onChange={e => setForm(p => ({...p,amount:e.target.value}))} required/></label>
-      </div><button type="submit" className="button button-primary" style={{ marginTop: 14 }} disabled={creating}>{creating ? 'Saving…' : 'Add Invoice'}</button></form>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ fontWeight: 800, fontSize: '1rem', color: '#1a202c' }}>Invoices</h2>
+          <p style={{ fontSize: '0.78rem', color: '#718096', marginTop: 2 }}>Recent transactions and payment status</p>
+        </div>
+      </div>
+
+      {error   && <div style={{ padding: '9px 14px', background: 'rgba(229,62,62,0.08)', border: '1px solid rgba(229,62,62,0.2)', borderRadius: 8, color: '#c53030', fontSize: '0.78rem' }}>{error}<button onClick={() => setError('')} style={{ marginLeft: 10, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>×</button></div>}
+      {success && <div style={{ padding: '9px 14px', background: '#f0fff4', border: '1px solid #9ae6b4', borderRadius: 8, color: '#276749', fontSize: '0.78rem' }}>✓ {success}</div>}
+
+      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+        {/* Table header */}
+        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 100px 100px 120px 110px', gap: 0, background: '#1a202c', padding: '10px 16px', fontSize: '0.72rem', fontWeight: 700, color: '#a0aec0', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          <div>#</div><div>Entity / Client</div><div>Status</div><div>Date</div><div style={{ textAlign: 'right' }}>Amount</div><div style={{ textAlign: 'center' }}>Action</div>
+        </div>
+
+        {loading && <div style={{ padding: 24, textAlign: 'center', color: '#a0aec0', fontSize: '0.85rem' }}>Loading invoices…</div>}
+
+        {!loading && invoices.length === 0 && (
+          <div style={{ padding: 32, textAlign: 'center', color: '#a0aec0', fontSize: '0.85rem' }}>
+            <div style={{ fontSize: '2rem', marginBottom: 8 }}>🧾</div>
+            No invoices yet
+          </div>
+        )}
+
+        {invoices.map((inv, i) => (
+          <div key={inv.id ?? i} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 100px 100px 120px 110px', gap: 0, padding: '11px 16px', borderBottom: '1px solid #f0f2f8', background: selected?.id === inv.id ? '#f0fff4' : i % 2 === 0 ? '#fff' : '#fafbfc', transition: 'background 0.1s', alignItems: 'center' }}>
+            <div style={{ fontSize: '0.72rem', color: '#a0aec0', fontWeight: 700 }}>#{i + 1}</div>
+            <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#1a202c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.client}</div>
+            <div>
+              <span style={{ padding: '3px 8px', borderRadius: 12, fontSize: '0.68rem', fontWeight: 700, background: `${statusColor[inv.status?.toLowerCase()] || '#718096'}18`, color: statusColor[inv.status?.toLowerCase()] || '#718096' }}>
+                {inv.status || 'Pending'}
+              </span>
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#718096' }}>{inv.date || '—'}</div>
+            <div style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.85rem', color: '#1a202c' }}>{inv.amount}</div>
+            <div style={{ textAlign: 'center' }}>
+              <button onClick={() => setSelected(inv)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f7f8fc', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', color: '#3182ce' }}>View</button>
+            </div>
+          </div>
+        ))}
+
+        {/* Sub-total footer */}
+        {invoices.length > 0 && (
+          <div style={{ padding: '12px 16px', background: '#f7f8fc', borderTop: '2px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: 24, fontSize: '0.8rem' }}>
+            <span style={{ color: '#718096' }}>Sub Total : <strong style={{ color: '#1a202c' }}>{invoices.length} transactions</strong></span>
+          </div>
+        )}
+      </div>
+
+      {/* Detail panel when row selected */}
+      {selected && (
+        <div style={{ background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>Transaction Detail — {selected.client}</div>
+            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#718096', fontWeight: 700 }}>✕ Close</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+            {[['Date', selected.date || '—'], ['Status', selected.status || 'Pending'], ['Amount', selected.amount]].map(([k, v]) => (
+              <div key={k} style={{ background: '#f7f8fc', borderRadius: 8, padding: '10px 14px' }}>
+                <div style={{ fontSize: '0.68rem', color: '#718096', marginBottom: 4 }}>{k}</div>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1a202c' }}>{v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => setSelected(null)} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem', color: '#e53e3e', display: 'flex', alignItems: 'center', gap: 6 }}>🗑 Dismiss</button>
+            <button style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid #38a169', background: '#f0fff4', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem', color: '#38a169', display: 'flex', alignItems: 'center', gap: 6 }}>✓ Mark Paid</button>
+            <button style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: '#1a202c', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>✓ Approve & Next →</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

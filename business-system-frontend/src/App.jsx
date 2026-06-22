@@ -7,6 +7,7 @@ import Dashboard from './components/Dashboard'
 import OnboardingWizard from './components/OnboardingWizard'
 import SuperAdminDashboard from './components/SuperAdminDashboard'
 import CashierPOS from './components/CashierPOS'
+import CookieConsent from './components/CookieConsent'
 import './App.css'
 
 function AppShell() {
@@ -79,6 +80,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppShell />
+        <CookieConsent />
       </AuthProvider>
     </BrowserRouter>
   )
